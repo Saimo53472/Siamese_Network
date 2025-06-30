@@ -21,8 +21,6 @@ def get_augmentation_pipeline():
         lambda x: TF.gaussian_blur(x, kernel_size=3, sigma=1),  # Simulate scan smudge, stain persistence
     ]
 
-
-# --- SAVE IMAGE ---
 def save_image(img, name, out_dir):
     os.makedirs(out_dir, exist_ok=True)
     path = os.path.join(out_dir, name)

@@ -110,10 +110,7 @@ def main():
         optimizer=tf.keras.optimizers.Adam(learning_rate=0.001)
     )
 
-    # base_dirs = ["augmented_full", "manuscript_images2", "augmented_full3"]
-    # train_ds, val_ds, tst_ds = load_and_merge_datasets(base_dirs, output_prefix="augmented_combo")
     train_ds, val_ds, tst_ds = load_datasets("manuscript_images2")
-    # train_ds, val_ds, tst_ds = load_datasets("augmented_full")
     metrics_callback = DistanceMetricsCallback(val_data=val_ds, threshold=0.5)
 
     history = model.fit(train_ds,
@@ -123,10 +120,7 @@ def main():
                         callbacks=[metrics_callback],
                         verbose=2)
 
-    # model.save("siamese_model.keras")
-
     summarize_test_performance(model, tst_ds, threshold=0.5)
-    # plot_validation_metrics(metrics_callback.history, save_path="validation_metrics4.png")
 
     # Assuming test_ds is a tf.data.Dataset
     for (img1_batch, img2_batch), label_batch in tst_ds.take(1):

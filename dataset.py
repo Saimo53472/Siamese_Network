@@ -79,7 +79,6 @@ def load_datasets(base_dir, save_dir="csv"):
     train_df, temp_df = train_test_split(df, test_size=0.2, stratify=df["label"], random_state=42)
     val_df, test_df = train_test_split(temp_df, test_size=0.5, stratify=temp_df["label"], random_state=42)
 
-    # Save CSVs
     train_df.to_csv(os.path.join(save_dir, f"{dataset_name}_train.csv"), index=False)
     val_df.to_csv(os.path.join(save_dir, f"{dataset_name}_val.csv"), index=False)
     test_df.to_csv(os.path.join(save_dir, f"{dataset_name}_test.csv"), index=False)
@@ -124,7 +123,6 @@ def load_and_merge_datasets(base_dirs, output_prefix="combined", save_dir="csv")
     train_df, temp_df = train_test_split(df, test_size=0.2, stratify=df["label"], random_state=42)
     val_df, test_df = train_test_split(temp_df, test_size=0.5, stratify=temp_df["label"], random_state=42)
 
-    # Save all splits to CSV
     train_df.to_csv(os.path.join(save_dir, f"{output_prefix}_train.csv"), index=False)
     val_df.to_csv(os.path.join(save_dir, f"{output_prefix}_val.csv"), index=False)
     test_df.to_csv(os.path.join(save_dir, f"{output_prefix}_test.csv"), index=False)

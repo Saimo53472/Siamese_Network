@@ -2,23 +2,19 @@ import cv2
 import numpy as np
 import os
 
-
 def load_image(image_path):
     return cv2.imread(image_path)
-
 
 def preprocess_image(image):
     gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     blurred_image = cv2.GaussianBlur(gray_image, (7, 7), 1.2)
     return blurred_image
 
-
 def laplacian_edge_detection(blurred_image, threshold):
     laplacian_kernel = np.array([[1, 4, 1], [4, -20, 4], [1, 4, 1]])
     result = cv2.filter2D(blurred_image, -1, laplacian_kernel)
     _, thresh = cv2.threshold(result, threshold, 255, cv2.THRESH_BINARY)
     return thresh
-
 
 def convex_hull(contours):
     all_points = [pt[0] for c in contours for pt in c]
@@ -59,8 +55,6 @@ def main():
         output_path = os.path.join(output_folder, f"page_{i}_cropped.jpg")
         cv2.imwrite(output_path, cropped_image)
         print(f"Saved cropped image to {output_path}")
-
-
 
 if __name__ == "__main__":
     main()
