@@ -1,3 +1,5 @@
+# saliency_runner.py
+
 import os
 import numpy as np
 import matplotlib.pyplot as plt
@@ -28,7 +30,8 @@ def load_top_matches(csv_path):
     return top_matches
 
 def main():
-    chosen_img1_name = "page_188_cropped.jpg"
+    output_dir = "saliency_outputs"
+    os.makedirs(output_dir, exist_ok=True)
 
     print("Loading model...")
     model = load_model(
@@ -42,21 +45,31 @@ def main():
     images, filenames = load_images_from_folder(IMAGE_FOLDER)
     top_matches = load_top_matches(TOP_MATCH_CSV)
 
-    top_match = top_matches.get(chosen_img1_name, [])[0]
-    if not top_match:
-        raise ValueError(f"No top matches found for {chosen_img1_name}")
-    chosen_img2_name = top_match[0]
+    filename_to_image = {fname: img for fname, img in zip(filenames, images)}
 
-    img1 = load_and_preprocess_image(os.path.join(IMAGE_FOLDER, chosen_img1_name))
-    img2 = load_and_preprocess_image(os.path.join(IMAGE_FOLDER, chosen_img2_name))
+    for img1_name, matches in top_matches.items():
+        if not matches:
+            continue
+        top_match_name = matches[0][0]
 
-    # Save the original image
-    plt.imsave("voynich_img1_seen.png", np.clip(img1, 0, 1))
+        img1 = filename_to_image.get(img1_name)
+        img2 = filename_to_image.get(top_match_name)
 
-    print("Computing saliency map...")
-    saliency = compute_saliency_map(model, img1, img2, input_index=0)
-    save_saliency_on_image(img1, saliency, save_path="voynich_saliency_img1.png")
-    print("Saliency saved to voynich_saliency_img1.png")
+        if img1 is None or img2 is None:
+            print(f"[!] Missing image for {img1_name} or {top_match_name}")
+            continue
+
+        try:
+            saliency = compute_saliency_map(model, img1, img2, input_index=0)
+
+            base_name = os.path.splitext(img1_name)[0]
+            save_path = os.path.join(output_dir, f"{base_name}_saliency.png")
+            save_saliency_on_image(img1, saliency, save_path=save_path)
+
+            print(f"Saved saliency for {img1_name} → {top_match_name} to {save_path}")
+
+        except Exception as e:
+            print(f"Error processing {img1_name}: {e}")
 
 if __name__ == "__main__":
     main()
