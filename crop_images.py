@@ -28,7 +28,7 @@ def crop_image(thresh, image):
     if points is not None:
         x, y, w, h = cv2.boundingRect(points)
         return image[y:y+h, x:x+w]
-    return image  # return original if no contours found
+    return image 
 
 def main():
     input_folder = "voynich_images"
@@ -37,7 +37,7 @@ def main():
 
     os.makedirs(output_folder, exist_ok=True)
 
-    for i in range(3, 207):  # Adjust range as needed
+    for i in range(3, 207):
         image_name = f"page_{i}.jpg"
         image_path = os.path.join(input_folder, image_name)
 
