@@ -42,17 +42,54 @@ def load_images_from_folder(folder):
 
 import random
 
+def get_quire_and_leaf(page_num):
+    # Each quire has 8 versos (pages 4, 6, ..., 18 => 1v, 2v, ..., 8v)
+    leaf_index = (page_num - 4) // 2
+    quire = leaf_index // 8
+    leaf_in_quire = (leaf_index % 8) + 1  # 1-indexed
+    return quire, leaf_in_quire
+
+def is_valid_comparison(page_i, page_j):
+    quire_i, leaf_i = get_quire_and_leaf(page_i)
+    quire_j, leaf_j = get_quire_and_leaf(page_j)
+    ok = 0
+
+    if page_i == page_j:
+        return False, ok
+    
+    if quire_i == quire_j:
+        # Conjoint leaves: (1,8), (2,7), (3,6), (4,5)
+        if (leaf_i, leaf_j) in [(1,8), (2,7), (3,6), (4,5)]:
+            ok = 1
+            return True, ok
+
+    if (leaf_i <= 4 and leaf_j <= 4) or (leaf_i > 4 and leaf_j > 4):
+        return True, ok
+
+    return False, ok
+
 def compute_all_distances(model, images, filenames):
     num_images = len(images)
-    distances = np.zeros((num_images, num_images))
+    distances = np.full((num_images, num_images), np.nan)  # Use NaN for invalid
+
+    page_numbers = [extract_page_number(f) for f in filenames]
 
     for i in tqdm(range(num_images), desc="Computing distances"):
         for j in range(i + 1, num_images):
+            page_i = page_numbers[i]
+            page_j = page_numbers[j]
+
+            v, ok = is_valid_comparison(page_i, page_j)
+
+            if not v:
+                continue
+
             img1 = np.expand_dims(images[i], axis=0)
             img2 = np.expand_dims(images[j], axis=0)
-            dist = model.predict([img1, img2])[0][0]  # Assuming output shape is (1, 1)
+            dist = model.predict([img1, img2])[0][0]
             distances[i, j] = dist
-            distances[j, i] = dist  # symmetric
+            if(ok == 0):
+                distances[j, i] = dist
 
     return distances
 
@@ -61,32 +98,6 @@ def save_distance_matrix_csv(distances, filenames, output_path="csv/distance_mat
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     df.to_csv(output_path)
     print(f"Saved distance matrix to {output_path}")
-
-
-def get_top_matches(distances, filenames, top_k=3):
-    results = {}
-    for i, fname in enumerate(filenames):
-        dists = distances[i]
-        sorted_indices = np.argsort(dists)
-        # Skip self-match at index 0
-        top_matches = [(filenames[j], dists[j]) for j in sorted_indices if j != i][:top_k]
-        results[fname] = top_matches
-    return results
-
-
-def save_top_matches(results, output_path="csv/top_matches_per_page.csv"):
-    rows = []
-    for fname, matches in results.items():
-        for rank, (match_name, dist) in enumerate(matches, 1):
-            rows.append({
-                'Image': fname,
-                f'Rank': rank,
-                'Match': match_name,
-                'Distance': dist
-            })
-    df = pd.DataFrame(rows)
-    df.to_csv(output_path, index=False)
-    print(f"[✓] Saved top matches to {output_path}")
 
 def main():
     print("Loading model and images...")
@@ -98,11 +109,18 @@ def main():
     )
     images, filenames = load_images_from_folder(IMAGE_FOLDER)
 
-    distances = compute_all_distances(model, images, filenames)
-    save_distance_matrix_csv(distances, filenames)
+     # Filter images to keep only even-numbered pages
+    filtered_images = []
+    filtered_filenames = []
 
-    top_matches = get_top_matches(distances, filenames, top_k=3)
-    save_top_matches(top_matches)
+    for img, fname in zip(images, filenames):
+        page_num = extract_page_number(fname)
+        if 4 <= page_num <= 112 and page_num % 2 == 0:  
+            filtered_images.append(img)
+            filtered_filenames.append(fname)
+
+    distances = compute_all_distances(model, filtered_images, filtered_filenames)
+    save_distance_matrix_csv(distances, filtered_filenames)
 
 if __name__ == "__main__":
     main()
