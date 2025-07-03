@@ -1,5 +1,3 @@
-# saliency_runner.py
-
 import os
 import numpy as np
 import matplotlib.pyplot as plt
@@ -50,7 +48,7 @@ def main():
     for img1_name, matches in top_matches.items():
         if not matches:
             continue
-        top_match_name = matches[0][0]
+        top_match_name = matches[0][0]  # best match
 
         img1 = filename_to_image.get(img1_name)
         img2 = filename_to_image.get(top_match_name)
@@ -62,6 +60,7 @@ def main():
         try:
             saliency = compute_saliency_map(model, img1, img2, input_index=0)
 
+            # Save saliency map
             base_name = os.path.splitext(img1_name)[0]
             save_path = os.path.join(output_dir, f"{base_name}_saliency.png")
             save_saliency_on_image(img1, saliency, save_path=save_path)

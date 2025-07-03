@@ -14,7 +14,6 @@ from saliency import compute_saliency_map, save_saliency_on_image
 IMAGE_FOLDER = "cropped_voynich_images"
 MODEL_PATH = "siamese_model.keras"
 INPUT_SHAPE = (256, 256, 3)
-THRESHOLD = 0.5
 
 def euclidean_distance(vectors):
     x, y = vectors
@@ -43,10 +42,14 @@ def load_images_from_folder(folder):
 import random
 
 def get_quire_and_leaf(page_num):
-    # Each quire has 8 versos (pages 4, 6, ..., 18 => 1v, 2v, ..., 8v)
-    leaf_index = (page_num - 4) // 2
+    # We only process even pages (versos): 4, 6, ..., 112
+    if page_num >= 26:
+        leaf_index = ((page_num - 4) // 2) + 1   # Skip missing folio 12 (pages 23–24)
+    else:
+        leaf_index = (page_num - 4) // 2
+
     quire = leaf_index // 8
-    leaf_in_quire = (leaf_index % 8) + 1  # 1-indexed
+    leaf_in_quire = (leaf_index % 8) + 1
     return quire, leaf_in_quire
 
 def is_valid_comparison(page_i, page_j):
@@ -99,6 +102,34 @@ def save_distance_matrix_csv(distances, filenames, output_path="csv/distance_mat
     df.to_csv(output_path)
     print(f"Saved distance matrix to {output_path}")
 
+def save_best_distances_per_page(distances, filenames, output_path="csv/best_distances.csv"):
+    best_distances = []
+    best_matches = []
+
+    for i, fname in enumerate(filenames):
+        valid_indices = np.where(~np.isnan(distances[i, :]))[0]
+        if len(valid_indices) == 0:
+            best_dist = np.nan
+            best_match = None
+        else:
+            # Find the index of the minimum distance among valid distances
+            min_idx_in_valid = np.argmin(distances[i, valid_indices])
+            best_idx = valid_indices[min_idx_in_valid]
+            best_dist = distances[i, best_idx]
+            best_match = filenames[best_idx]
+
+        best_distances.append(best_dist)
+        best_matches.append(best_match)
+
+    df_best = pd.DataFrame({
+        'filename': filenames,
+        'best_match_filename': best_matches,
+        'best_distance': best_distances
+    })
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    df_best.to_csv(output_path, index=False)
+    print(f"Saved best distances and matches per page to {output_path}")
+
 def main():
     print("Loading model and images...")
     model = load_model(
@@ -121,6 +152,7 @@ def main():
 
     distances = compute_all_distances(model, filtered_images, filtered_filenames)
     save_distance_matrix_csv(distances, filtered_filenames)
+    save_best_distances_per_page(distances, filtered_filenames)
 
 if __name__ == "__main__":
     main()
