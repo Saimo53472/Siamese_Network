@@ -9,14 +9,21 @@ import pandas as pd
 import tensorflow as tf
 from sklearn.model_selection import train_test_split
 
+#Extract numeric page number
 def extract_page_number(filename):
     match = re.search(r'page_(\d+)', filename)
     return int(match.group(1)) if match else None
 
+# Extract augmentation type from filename
 def extract_aug_type(filename):
     match = re.search(r'_(t\d+)', filename)
     return match.group(1) if match else None
 
+# Create pairs of images from base_dir:
+    # positive pairs = images two pages apart (page i and i+2),
+    # negative pairs = randomly selected non-adjacent pages,
+    # grouping by augmentation type or "plain" if none.
+    # Returns list of pairs and csv rows for saving.
 def make_pairs(base_dir):
     files = os.listdir(base_dir)
     grouped = {}
@@ -31,20 +38,18 @@ def make_pairs(base_dir):
     csv_rows = []
 
     for aug_type, file_list in grouped.items():
-        file_list.sort()  # sort by page number
+        file_list.sort() 
 
         for i in range(0, len(file_list) - 4):
             page_i, file_i = file_list[i]
             path_i = os.path.join(base_dir, file_i)
 
-            # Positive pair
             page_next, file_next = file_list[i + 2]
             if page_next == page_i + 2:
                 path_j = os.path.join(base_dir, file_next)
                 pairs.append((path_i, path_j, 1))
                 csv_rows.append((path_i, path_j, 1))
 
-                # Negative pair
                 j_candidates = list(range(i + 4, len(file_list), 2))
                 if j_candidates:
                     j = random.choice(j_candidates)
@@ -62,6 +67,8 @@ def preprocess_image(path, size=(256,256)):
     image = image / 255.0
     return image
 
+# Generate image pairs from base_dir, save CSV splits (train/val/test),
+    # return TensorFlow datasets for each split.
 def load_datasets(base_dir, save_dir="csv"):
     os.makedirs(save_dir, exist_ok=True)
 
@@ -106,7 +113,9 @@ def load_datasets(base_dir, save_dir="csv"):
     print(f"\nSaved split CSVs to `{save_dir}` with prefix `{dataset_name}_`")
     return df_to_dataset(train_df), df_to_dataset(val_df), df_to_dataset(test_df)
 
-
+# Create combined dataset from multiple directories,
+# save CSV splits and return TensorFlow datasets,
+# print label distributions for data splits.
 def load_and_merge_datasets(base_dirs, output_prefix="combined", save_dir="csv"):
     os.makedirs(save_dir, exist_ok=True)
 

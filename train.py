@@ -11,7 +11,9 @@ from callback import DistanceMetricsCallback
 from plot import plot_validation_metrics
 from metrics import evaluate_model_on_dataset, summarize_test_performance
 
-# Contrastive loss with margin (1 for similar, 0 for dissimilar)
+# Contrastive loss with margin function:
+# This returns a custom loss function used for training Siamese networks.
+# The loss encourages pairs with label 1 to be close, and pairs with label 0 to be at least 'margin' apart.
 def contrastive_loss_with_margin(margin):
     def contrastive_loss(y_true, y_pred):
         square_pred = K.square(y_pred)
@@ -19,6 +21,7 @@ def contrastive_loss_with_margin(margin):
         return y_true * (1/2) * square_pred + (1 - y_true) * (1/2) * margin_square
     return contrastive_loss
 
+# Function to create a CNN block:
 def get_cnn_block(filters):
     return Sequential([
         Conv2D(filters, 3, padding="same", activation="relu"),
@@ -26,15 +29,19 @@ def get_cnn_block(filters):
         Dropout(0.1)
     ])
 
+# Computes Euclidean distance between two feature vectors.
 def euclidean_distance(vects):
     x, y = vects
     sum_square = K.sum(K.square(x - y), axis=1, keepdims=True)
     return K.sqrt(K.maximum(sum_square, K.epsilon()))
 
+# Defines the output shape of the Lambda layer computing Euclidean distance.
 def eucl_dist_output_shape(shapes):
     shape1, shape2 = shapes
     return (shape1[0], 1)
 
+# Builds the Siamese network model.
+# Two inputs go through shared CNN blocks, and their embeddings are compared via Euclidean distance.
 def build_model(input_shape, margin=1):
     DEPTH = 64
 
@@ -58,6 +65,8 @@ def build_model(input_shape, margin=1):
     model = Model(inputs=[img_A_inp, img_B_inp], outputs=distance)
     return model
 
+# Main function for training and evaluating the Siamese network.
+# Loads multiple datasets, merges them, trains the model, saves it, and plots metrics.
 def main():
     input_shape = (256, 256, 3)
     model = build_model(input_shape=input_shape, margin=1)

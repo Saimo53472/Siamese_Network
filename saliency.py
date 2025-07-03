@@ -10,13 +10,25 @@ from sklearn.metrics import accuracy_score, roc_auc_score
 from callback import DistanceMetricsCallback
 from plot import plot_validation_metrics
 from metrics import evaluate_model_on_dataset, summarize_test_performance
+from tensorflow.keras.preprocessing.image import load_img, img_to_array
+from tensorflow.image import resize
 
 import matplotlib.pyplot as plt
 import matplotlib
 import tensorflow as tf
 import numpy as np
 import cv2
+import os
 
+INPUT_SHAPE = (256, 256, 3)
+
+def load_and_preprocess_image(path):
+    img = load_img(path)
+    img = img_to_array(img) / 255.0 
+    img = resize(img, INPUT_SHAPE[:2])
+    return img.numpy()
+
+# Compute the saliency map by taking the gradient of output wrt input image
 def compute_saliency_map(model, img1, img2, input_index=0):
     img1 = tf.convert_to_tensor(np.expand_dims(img1, axis=0), dtype=tf.float32)
     img2 = tf.convert_to_tensor(np.expand_dims(img2, axis=0), dtype=tf.float32)
@@ -69,15 +81,19 @@ def get_cnn_block(filters):
         Dropout(0.1)
     ])
 
+# Compute Euclidean distance between two vectors
 def euclidean_distance(vects):
     x, y = vects
     sum_square = K.sum(K.square(x - y), axis=1, keepdims=True)
     return K.sqrt(K.maximum(sum_square, K.epsilon()))
 
+# Output shape for Lambda layer computing Euclidean distance
 def eucl_dist_output_shape(shapes):
     shape1, shape2 = shapes
     return (shape1[0], 1)
 
+
+# Build Siamese model using CNN blocks and Euclidean distance
 def build_model(input_shape, margin=1):
     DEPTH = 64
 
@@ -101,6 +117,7 @@ def build_model(input_shape, margin=1):
     model = Model(inputs=[img_A_inp, img_B_inp], outputs=distance)
     return model
 
+# Main training, evaluation, and saliency visualization function
 def main():
     input_shape = (256, 256, 3)
     model = build_model(input_shape=input_shape, margin=1)
@@ -122,14 +139,19 @@ def main():
 
     summarize_test_performance(model, tst_ds, threshold=0.5)
 
-    # Assuming test_ds is a tf.data.Dataset
-    for (img1_batch, img2_batch), label_batch in tst_ds.take(1):
-        img1 = img1_batch[0].numpy()
-        img2 = img2_batch[0].numpy()
-        plt.imsave("img1_seen.png", np.clip(img1, 0, 1))
+    page1_name = "manuscript_images2/page_186.jpg"
+    page2_name = "manuscript_images2/page_188.jpg"
+   
+    img1 = load_and_preprocess_image(page1_name)
+    img2 = load_and_preprocess_image(page2_name)
 
-        saliency = compute_saliency_map(model, img1, img2, input_index=0)
-        save_saliency_on_image(img1, saliency, save_path="saliency_img1.png")
+    plt.imsave("img1_seen.png", np.clip(img1, 0, 1))
+    plt.imsave("img2_seen.png", np.clip(img2, 0, 1))
+
+    saliency = compute_saliency_map(model, img1, img2, input_index=0)
+    save_saliency_on_image(img1, saliency, save_path="saliency_img1.png")
+    saliency2 = compute_saliency_map(model, img2, img1, input_index=0)
+    save_saliency_on_image(img2, saliency2, save_path="saliency_img2.png")
 
 
 if __name__ == "__main__":

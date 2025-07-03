@@ -7,13 +7,9 @@ from scipy.stats import shapiro, levene
 from scipy.stats import kruskal
 from scipy.stats import mannwhitneyu
 
-# Load the Excel file
 df = pd.read_excel("distance_matrix.xlsx", index_col=0)
-
-# Define Language B pages
 language_b_pages = [52, 62, 66, 68, 78, 80, 82, 86, 92, 96, 100, 110]
 
-# Map filenames to language group (A or B)
 def get_language(filename):
     try:
         num = int(filename.split('_')[1])
@@ -21,19 +17,17 @@ def get_language(filename):
     except:
         return None
 
-# Ensure all labels are strings
 df.index = df.index.astype(str)
 df.columns = df.columns.astype(str)
 
-# Use only intersecting filenames to avoid Series return issues
 valid_pages = df.index.intersection(df.columns)
 
-# Build list of labeled distances
+# Construct a dataframe with distances and group labels (A→A, B→B, A→B)
 distance_data = []
 for i in valid_pages:
     for j in valid_pages:
         if i == j:
-            continue  # skip self-comparisons
+            continue  
         dist = df.at[i, j]
         if pd.notna(dist):
             group_i = get_language(i)
@@ -48,15 +42,14 @@ for i in valid_pages:
                 distance_data.append({"Pair": f"{i} vs {j}", "Distance": dist, "Group": label})
 
 
-# Convert to DataFrame
 dist_df = pd.DataFrame(distance_data)
 
-# Calculate averages
+# Calculate and print the average distance for each group type
 avg_distances = dist_df.groupby("Group")["Distance"].mean()
 print("Average Distances:")
 print(avg_distances)
 
-# Boxplot
+# Create a boxplot to visualize distance distributions across groups
 plt.figure(figsize=(8, 5))
 sns.boxplot(x="Group", y="Distance", data=dist_df, hue="Group", palette={"A→A": "purple", "B→B": "red", "A→B": "blue"}, legend=False)
 plt.title("Distribution of Distances by Group")
@@ -66,22 +59,24 @@ plt.tight_layout()
 plt.savefig("distance_boxplot.png")
 plt.show()
 
-# Split distances by group
 aa = dist_df[dist_df["Group"] == "A→A"]["Distance"]
 bb = dist_df[dist_df["Group"] == "B→B"]["Distance"]
 ab = dist_df[dist_df["Group"] == "A→B"]["Distance"]
 
+# Perform Shapiro-Wilk tests to check for normality in each group
 print("\nShapiro-Wilk Test for Normality:")
 for group_name, group_data in zip(["A→A", "B→B", "A→B"], [aa, bb, ab]):
     stat, p = shapiro(group_data)
     result = "Normal" if p > 0.05 else "Not normal"
     print(f"{group_name}: p = {p:.4e} → {result}")
 
+# Perform Levene’s test to check for homogeneity of variances across groups
 print("\nLevene’s Test for Equal Variances:")
 stat, p = levene(aa, bb, ab)
 result = "Equal variances" if p > 0.05 else "Unequal variances"
 print(f"p = {p:.4e} → {result}")
 
+# Perform Kruskal-Wallis test (non-parametric ANOVA) to check overall group differences
 h_stat, p_kw = kruskal(aa, bb, ab)
 print("\nKruskal-Wallis Test:")
 print(f"H-statistic: {h_stat:.4f}")
@@ -91,12 +86,13 @@ pairs = [("A→A", aa, ab), ("A→A", aa, bb), ("A→B", ab, bb)]
 labels = []
 p_values = []
 
+# Perform pairwise Wilcoxon Rank-Sum tests between groups
 for label, g1, g2 in pairs:
     stat, p_val = mannwhitneyu(g1, g2, alternative="two-sided")
     labels.append(f"{label} vs {label.replace('A', 'B')}")
     p_values.append(p_val)
 
-# Bonferroni correction
+# Apply Bonferroni correction to adjust for multiple comparisons
 corrected = multipletests(p_values, method="bonferroni")
 corrected_pvals = corrected[1]
 reject_flags = corrected[0]
@@ -105,38 +101,3 @@ print("\nMann-Whitney U Tests (with Bonferroni correction):")
 for i in range(len(labels)):
     result = " Significant" if reject_flags[i] else " Not significant"
     print(f"{labels[i]} → p = {p_values[i]:.4e}, corrected p = {corrected_pvals[i]:.4e} →{result}")
-
-
-# # One-way ANOVA
-# f_stat, p_anova = f_oneway(aa, bb, ab)
-# print("\n One-way ANOVA:")
-# print(f"F-statistic: {f_stat:.4f}")
-# print(f"P-value:     {p_anova:.4e}")
-
-# # If ANOVA is significant, do pairwise t-tests
-# if p_anova < 0.05:
-#     print("\n ANOVA is significant — running post-hoc t-tests...")
-
-#     # Perform t-tests between all pairs
-#     pairs = [("A→A", aa, ab), ("A→A", aa, bb), ("A→B", ab, bb)]
-#     labels = []
-#     p_values = []
-
-#     for label, g1, g2 in pairs:
-#         t_stat, p_val = ttest_ind(g1, g2, equal_var=False)  
-#         labels.append(f"{label} vs {label.replace('A', 'B')}")
-#         p_values.append(p_val)
-
-#     # Apply Bonferroni correction
-#     corrected = multipletests(p_values, method="bonferroni")
-#     corrected_pvals = corrected[1]
-#     reject_flags = corrected[0]
-
-#     # Report results
-#     print("\n Pairwise t-tests (with Bonferroni correction):")
-#     for i in range(len(labels)):
-#         result = " Significant" if reject_flags[i] else " Not significant"
-#         print(f"{labels[i]} → p = {p_values[i]:.4e}, corrected p = {corrected_pvals[i]:.4e} → {result}")
-# else:
-#     print("\n ANOVA not significant — no need for post-hoc tests.")
-

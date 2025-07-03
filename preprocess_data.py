@@ -12,6 +12,7 @@ OUTPUT_DIR = 'augmented_full2'
 
 IMAGE_EXTENSIONS = ('.png', '.jpg', '.jpeg')
 
+#Returns a list of image augmentation functions
 def get_augmentation_pipeline():
     return [
         lambda x: TF.resize(x, (256, 256)),  # Base resize (consistent size)
@@ -27,6 +28,8 @@ def save_image(img, name, out_dir):
     img.save(path)
     return path
 
+#For every image pair 2 pages apart, apply a sequence of defined augmentations and save the results.
+    #Augmentations are applied separately to both images in each pair.
 def create_augmented_images(image_files, output_dir, num_transforms=5):
     transforms_list = get_augmentation_pipeline()
 
@@ -54,10 +57,11 @@ def create_augmented_images(image_files, output_dir, num_transforms=5):
 
 
 def get_page_number(filename):
-    match = re.search(r'(\d+)', filename)  # \d: find a digit. +: an any other digit after that one
+    match = re.search(r'(\d+)', filename) 
     return int(match.group(1)) if match else -1
 
-
+#Loads manuscript images from the input directory, sorts them by page number,
+#and generates augmented images using defined transformations.
 def main():
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     all_pairs = []

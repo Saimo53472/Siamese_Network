@@ -5,23 +5,27 @@ import os
 def load_image(image_path):
     return cv2.imread(image_path)
 
+# Convert image to grayscale and apply Gaussian blur
 def preprocess_image(image):
     gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     blurred_image = cv2.GaussianBlur(gray_image, (7, 7), 1.2)
     return blurred_image
 
+# Apply Laplacian filter and threshold result to detect edges
 def laplacian_edge_detection(blurred_image, threshold):
     laplacian_kernel = np.array([[1, 4, 1], [4, -20, 4], [1, 4, 1]])
     result = cv2.filter2D(blurred_image, -1, laplacian_kernel)
     _, thresh = cv2.threshold(result, threshold, 255, cv2.THRESH_BINARY)
     return thresh
 
+# Compute convex hull around all contour points
 def convex_hull(contours):
     all_points = [pt[0] for c in contours for pt in c]
     if all_points:
         return cv2.convexHull(np.array(all_points))
     return None
 
+# Find contours from thresholded edges and crop image to bounding rect of hull
 def crop_image(thresh, image):
     contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_TC89_KCOS)
     points = convex_hull(contours)

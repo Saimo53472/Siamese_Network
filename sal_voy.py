@@ -16,6 +16,7 @@ MODEL_PATH = "siamese_model.keras"
 INPUT_SHAPE = (256, 256, 3)
 TOP_MATCH_CSV = "csv/top_matches_per_page.csv"
 
+# Function to load top matches from a CSV file
 def load_top_matches(csv_path):
     import pandas as pd
     df = pd.read_csv(csv_path)
@@ -27,6 +28,7 @@ def load_top_matches(csv_path):
         top_matches[fname].append((row["Match"], row["Distance"]))
     return top_matches
 
+# Main function to generate and save saliency maps for top image matches
 def main():
     output_dir = "saliency_outputs"
     os.makedirs(output_dir, exist_ok=True)
@@ -48,7 +50,7 @@ def main():
     for img1_name, matches in top_matches.items():
         if not matches:
             continue
-        top_match_name = matches[0][0]  # best match
+        top_match_name = matches[0][0] 
 
         img1 = filename_to_image.get(img1_name)
         img2 = filename_to_image.get(top_match_name)
@@ -60,7 +62,6 @@ def main():
         try:
             saliency = compute_saliency_map(model, img1, img2, input_index=0)
 
-            # Save saliency map
             base_name = os.path.splitext(img1_name)[0]
             save_path = os.path.join(output_dir, f"{base_name}_saliency.png")
             save_saliency_on_image(img1, saliency, save_path=save_path)

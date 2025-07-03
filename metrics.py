@@ -1,6 +1,7 @@
 import numpy as np
 from sklearn.metrics import confusion_matrix, roc_auc_score
 
+ # Computes and returns evaluation metrics for the model on the given dataset.
 def evaluate_model_on_dataset(model, dataset, threshold=0.5, verbose=True):
     y_true = []
     distances = []
@@ -35,6 +36,7 @@ def evaluate_model_on_dataset(model, dataset, threshold=0.5, verbose=True):
         "distances": distances
     }
 
+# Prints a concise summary of evaluation metrics on the test set.
 def summarize_test_performance(model, dataset, threshold=0.5):
     y_true = []
     distances = []

@@ -1,6 +1,7 @@
 import requests
 import os
 
+# Downloads all page images of Sermons manuscript into 'manuscript_images2' folder.
 manifest_url = 'https://collections.library.yale.edu/manifests/11625507'
 os.makedirs('manuscript_images2', exist_ok=True)
 

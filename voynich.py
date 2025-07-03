@@ -15,6 +15,7 @@ IMAGE_FOLDER = "cropped_voynich_images"
 MODEL_PATH = "siamese_model.keras"
 INPUT_SHAPE = (256, 256, 3)
 
+# Euclidean distance function for custom layers (used in model)
 def euclidean_distance(vectors):
     x, y = vectors
     sum_square = K.sum(K.square(x - y), axis=1, keepdims=True)
@@ -41,8 +42,9 @@ def load_images_from_folder(folder):
 
 import random
 
+# Computes the quire and leaf number based on the page number,
+# accounting for a missing folio (12)
 def get_quire_and_leaf(page_num):
-    # We only process even pages (versos): 4, 6, ..., 112
     if page_num >= 26:
         leaf_index = ((page_num - 4) // 2) + 1   # Skip missing folio 12 (pages 23–24)
     else:
@@ -52,6 +54,7 @@ def get_quire_and_leaf(page_num):
     leaf_in_quire = (leaf_index % 8) + 1
     return quire, leaf_in_quire
 
+# Determines if two pages should be compared based on quire and leaf rules
 def is_valid_comparison(page_i, page_j):
     quire_i, leaf_i = get_quire_and_leaf(page_i)
     quire_j, leaf_j = get_quire_and_leaf(page_j)
@@ -71,9 +74,11 @@ def is_valid_comparison(page_i, page_j):
 
     return False, ok
 
+# Compute pairwise distances between images using the Siamese model
+# Only for valid comparisons per is_valid_comparison
 def compute_all_distances(model, images, filenames):
     num_images = len(images)
-    distances = np.full((num_images, num_images), np.nan)  # Use NaN for invalid
+    distances = np.full((num_images, num_images), np.nan) 
 
     page_numbers = [extract_page_number(f) for f in filenames]
 
@@ -96,12 +101,14 @@ def compute_all_distances(model, images, filenames):
 
     return distances
 
+# Saves the full distance matrix as CSV
 def save_distance_matrix_csv(distances, filenames, output_path="csv/distance_matrix.csv"):
     df = pd.DataFrame(distances, index=filenames, columns=filenames)
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     df.to_csv(output_path)
     print(f"Saved distance matrix to {output_path}")
 
+# Finds best (minimum) distance matches per page and saves to CSV
 def save_best_distances_per_page(distances, filenames, output_path="csv/best_distances.csv"):
     best_distances = []
     best_matches = []
@@ -112,7 +119,6 @@ def save_best_distances_per_page(distances, filenames, output_path="csv/best_dis
             best_dist = np.nan
             best_match = None
         else:
-            # Find the index of the minimum distance among valid distances
             min_idx_in_valid = np.argmin(distances[i, valid_indices])
             best_idx = valid_indices[min_idx_in_valid]
             best_dist = distances[i, best_idx]
@@ -130,6 +136,7 @@ def save_best_distances_per_page(distances, filenames, output_path="csv/best_dis
     df_best.to_csv(output_path, index=False)
     print(f"Saved best distances and matches per page to {output_path}")
 
+# Main workflow: load model and images, filter images, compute distances, save results
 def main():
     print("Loading model and images...")
     model = load_model(
@@ -140,7 +147,6 @@ def main():
     )
     images, filenames = load_images_from_folder(IMAGE_FOLDER)
 
-     # Filter images to keep only even-numbered pages
     filtered_images = []
     filtered_filenames = []
 

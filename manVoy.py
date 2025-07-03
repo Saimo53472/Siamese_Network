@@ -1,6 +1,7 @@
 import requests
 import os
 
+# Downloads all page images of Voynich manuscript into 'voynich_images' folder.
 manifest_url = 'https://collections.library.yale.edu/manifests/2002046'
 os.makedirs('voynich_images', exist_ok=True)
 

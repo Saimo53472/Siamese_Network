@@ -1,6 +1,7 @@
 from tensorflow.keras.callbacks import Callback
 from metrics import evaluate_model_on_dataset
 
+# It computes key classification metrics (accuracy, precision, recall, F1 score, AUC) and confusion matrices durng training.
 class DistanceMetricsCallback(Callback):
     def __init__(self, val_data, threshold=0.5):
         super().__init__()

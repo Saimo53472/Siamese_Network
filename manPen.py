@@ -2,6 +2,7 @@ import requests
 import os
 import json
 
+# Downloads all page images of Ricettario manuscript into 'manuscript_images' folder.
 manifest_url = 'https://colenda.library.upenn.edu/items/ark:/81431/p3rs2h/manifest'
 
 os.makedirs('manuscript_images', exist_ok=True)

@@ -1,12 +1,11 @@
 import matplotlib.pyplot as plt
 
+# Plots accuracy, F1 score, and AUC over training epochs from metrics history.
 def plot_validation_metrics(metrics_history, save_path=None):
     epochs = range(1, len(metrics_history["accuracy"]) + 1)
 
     plt.figure(figsize=(10, 6))
     plt.plot(epochs, metrics_history["accuracy"], label='Accuracy')
-    # plt.plot(epochs, metrics_history["precision"], label='Precision')
-    # plt.plot(epochs, metrics_history["recall"], label='Recall')
     plt.plot(epochs, metrics_history["f1_score"], label='F1 Score')
     plt.plot(epochs, metrics_history["auc"], label='AUC')
 
