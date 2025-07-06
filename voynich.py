@@ -136,6 +136,30 @@ def save_best_distances_per_page(distances, filenames, output_path="csv/best_dis
     df_best.to_csv(output_path, index=False)
     print(f"Saved best distances and matches per page to {output_path}")
 
+def get_top_matches(distances, filenames, top_k=3):
+    results = {}
+    for i, fname in enumerate(filenames):
+        dists = distances[i]
+        sorted_indices = np.argsort(dists)
+        top_matches = [(filenames[j], dists[j]) for j in sorted_indices if j != i][:top_k]
+        results[fname] = top_matches
+    return results
+
+
+def save_top_matches(results, output_path="csv/top_matches_per_page.csv"):
+    rows = []
+    for fname, matches in results.items():
+        for rank, (match_name, dist) in enumerate(matches, 1):
+            rows.append({
+                'Image': fname,
+                f'Rank': rank,
+                'Match': match_name,
+                'Distance': dist
+            })
+    df = pd.DataFrame(rows)
+    df.to_csv(output_path, index=False)
+    print(f"Saved top matches to {output_path}")
+
 # Main workflow: load model and images, filter images, compute distances, save results
 def main():
     print("Loading model and images...")
