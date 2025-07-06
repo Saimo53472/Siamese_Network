@@ -3,36 +3,18 @@ import numpy as np
 import matplotlib.pyplot as plt
 from tensorflow.keras.models import load_model
 from tensorflow.keras import backend as K
-from voynich import (
-    load_and_preprocess_image,
-    euclidean_distance,
-    get_top_matches,
-    load_images_from_folder
-)
+import pandas as pd
+from voynich import load_and_preprocess_image, euclidean_distance
 from saliency import compute_saliency_map, save_saliency_on_image
 
-IMAGE_FOLDER = "cropped_voynich_images"
+IMAGE_FOLDER = "voynich_images"
 MODEL_PATH = "siamese_model.keras"
-INPUT_SHAPE = (256, 256, 3)
-TOP_MATCH_CSV = "csv/top_matches_per_page.csv"
+TOP_MATCH_CSV = "csv/best_distances.csv"
+OUTPUT_DIR = "saliency_outputs"
+os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-# Function to load top matches from a CSV file
-def load_top_matches(csv_path):
-    import pandas as pd
-    df = pd.read_csv(csv_path)
-    top_matches = {}
-    for _, row in df.iterrows():
-        fname = row["Image"]
-        if fname not in top_matches:
-            top_matches[fname] = []
-        top_matches[fname].append((row["Match"], row["Distance"]))
-    return top_matches
-
-# Main function to generate and save saliency maps for top image matches
+# Saliency map for the Voynich manuscript pages
 def main():
-    output_dir = "saliency_outputs"
-    os.makedirs(output_dir, exist_ok=True)
-
     print("Loading model...")
     model = load_model(
         MODEL_PATH,
@@ -41,32 +23,33 @@ def main():
         custom_objects={"euclidean_distance": euclidean_distance}
     )
 
-    print("Loading images and top matches...")
-    images, filenames = load_images_from_folder(IMAGE_FOLDER)
-    top_matches = load_top_matches(TOP_MATCH_CSV)
+    df = pd.read_csv(TOP_MATCH_CSV)
 
-    filename_to_image = {fname: img for fname, img in zip(filenames, images)}
+    for _, row in df.iterrows():
+        img1_name = row["filename"]
+        top_match_name = row["best_match_filename"]
 
-    for img1_name, matches in top_matches.items():
-        if not matches:
+        img1_path = os.path.join(IMAGE_FOLDER, img1_name)
+        img2_path = os.path.join(IMAGE_FOLDER, top_match_name)
+
+        if not os.path.exists(img1_path) or not os.path.exists(img2_path):
+            print(f"Missing file: {img1_name} or {top_match_name}")
             continue
-        top_match_name = matches[0][0] 
 
-        img1 = filename_to_image.get(img1_name)
-        img2 = filename_to_image.get(top_match_name)
-
-        if img1 is None or img2 is None:
-            print(f"[!] Missing image for {img1_name} or {top_match_name}")
-            continue
+        img1 = load_and_preprocess_image(img1_path)
+        img2 = load_and_preprocess_image(img2_path)
 
         try:
+            resized_img_path = os.path.join(OUTPUT_DIR, os.path.splitext(img1_name)[0] + "_resized.png")
+            plt.imsave(resized_img_path, np.clip(img1, 0, 1))
+
             saliency = compute_saliency_map(model, img1, img2, input_index=0)
 
             base_name = os.path.splitext(img1_name)[0]
-            save_path = os.path.join(output_dir, f"{base_name}_saliency.png")
-            save_saliency_on_image(img1, saliency, save_path=save_path)
+            saliency_save_path = os.path.join(OUTPUT_DIR, f"{base_name}_saliency.png")
+            save_saliency_on_image(img1, saliency, save_path=saliency_save_path)
 
-            print(f"Saved saliency for {img1_name} → {top_match_name} to {save_path}")
+            print(f"Saved: {saliency_save_path} (match: {top_match_name})")
 
         except Exception as e:
             print(f"Error processing {img1_name}: {e}")
